@@ -1,7 +1,7 @@
 # sshgateway
 A ssh gateway server.
 
-## Install
+## Installation
 
 `pip3 install sshgateway`
 
@@ -10,11 +10,17 @@ or
 `pip3 install git+https://github.com/guyingbo/sshgateway.git`
 
 if you do not have right to access system key file(), you can generate a keyfile on your own use command:
+
 `ssh-keygen -t rsa -f ~/.sshgateway/server_host_rsa_key`
+
 , then add
+
 `server_host_keys = ['~/.sshgateway/ssh_host_rsa_key']`
+
 to `~/.sshgateway/config.toml`.
 
+
+generate configuration file:
 
 ~~~shell
 mkdir ~/.sshgateway

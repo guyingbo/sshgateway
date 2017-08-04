@@ -157,7 +157,7 @@ def main():
                         default=False)
     args = parser.parse_args()
     try:
-        with open(args.config) as configfile:
+        with open(expanduser(args.config)) as configfile:
             config.update(pytoml.loads(configfile.read()))
     except FileNotFoundError:
         print('Can not find configuration file. use default config')
