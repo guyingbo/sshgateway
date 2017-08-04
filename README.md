@@ -1,12 +1,16 @@
 # sshgateway
 A ssh gateway server.
 
+## Install
+
+`pip3 install sshgateway`
+
 ## Examples
 
 `sshgateway --show-config > example-config.toml`
 
 
-### Configuration
+### Configuration Example
 
 ~~~toml
 banner = 'Welcome to bastion server, {username}!'

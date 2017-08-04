@@ -9,7 +9,7 @@ import operator
 from functools import reduce
 from os.path import expanduser
 from collections import namedtuple
-__version__ = '0.1.0'
+__version__ = '0.1.1'
 config = {
     'passwords': {},
     'hosts': [],
