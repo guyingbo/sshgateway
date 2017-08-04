@@ -9,7 +9,7 @@ or
 
 `pip3 install git+https://github.com/guyingbo/sshgateway.git`
 
-if you do not have right to access system key file(), you can generate a keyfile on your own use command:
+If you do not have right to access system key file(/etc/ssh/ssh_host_rsa_key), you can generate a keyfile on your own use command:
 
 `ssh-keygen -t rsa -f ~/.sshgateway/ssh_host_rsa_key`
 
@@ -34,6 +34,7 @@ sshgateway --show-config > ~/.sshgateway/config.toml
 ~~~toml
 banner = 'Welcome to bastion server, {username}!'
 port = 8022
+server_host_keys = ['~/.sshgateway/ssh_host_rsa_key']
 
 [passwords]
 admin-1 = 'qV2iEadIGV2rw' # password of 'secretpw'
