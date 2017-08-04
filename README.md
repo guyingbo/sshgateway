@@ -11,7 +11,7 @@ or
 
 if you do not have right to access system key file(), you can generate a keyfile on your own use command:
 
-`ssh-keygen -t rsa -f ~/.sshgateway/server_host_rsa_key`
+`ssh-keygen -t rsa -f ~/.sshgateway/ssh_host_rsa_key`
 
 , then add
 

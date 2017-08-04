@@ -143,7 +143,7 @@ class MySSHServer(asyncssh.SSHServer):
 async def start_server():
     await asyncssh.create_server(
             MySSHServer, '', config['port'],
-            server_host_keys=config['server_host_keys'],
+            server_host_keys=list(map(expanduser, config['server_host_keys'])),
             authorized_client_keys=expanduser(
                 config['authorized_client_keys']),
             process_factory=handle_client,
