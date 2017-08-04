@@ -1,14 +1,3 @@
-# sshgateway
-A ssh gateway server.
-
-## Examples
-
-`sshgateway --show-config > example-config.toml`
-
-
-### Configuration
-
-~~~toml
 banner = 'Welcome to bastion server, {username}!'
 port = 8022
 
@@ -16,6 +5,7 @@ port = 8022
 admin-1 = 'qV2iEadIGV2rw' # password of 'secretpw'
 dev-user1 = '' # do not need password
 test-user1 = ''
+
 
 [[hosts]]
 name = 'test-server'
@@ -52,4 +42,3 @@ hostnames = ['^dev.*$']
 [[permissions]]
 groups = ['test']
 hostnames = ['^test.*$']
-~~~
