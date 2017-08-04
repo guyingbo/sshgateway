@@ -160,20 +160,30 @@ def main():
         try:
             with open(args.config) as configfile:
                 config.update(pytoml.loads(configfile.read()))
-            if args.show:
-                print(pytoml.dumps(config))
-                sys.exit(0)
-            config['hosts'] = [
-                    Host(**host) for host in config['hosts']]
-            config['groups'] = [
-                    Group(**group) for group in config['groups']]
-            config['permissions'] = [
-                    Permission(**perm) for perm in config['permissions']]
-        except IOError:
-            print('Can not find configuration file', file=sys.stderr)
-        except Exception as e:
-            print(f'Invalid configuration file: {e}')
+        except FileNotFoundError:
+            print('Can not find configuration file.', file=sys.stderr)
             sys.exit(1)
+        except PermissionError:
+            print('Can not read configuration file.', file=sys.stderr)
+            sys.exit(1)
+        except pytoml.TomlError as e:
+            print(f'Invalid configuration file: {e}', file=sys.stderr)
+
+    if args.show:
+        print(pytoml.dumps(config))
+        sys.exit(0)
+
+    try:
+        config['hosts'] = [
+                Host(**host) for host in config['hosts']]
+        config['groups'] = [
+                Group(**group) for group in config['groups']]
+        config['permissions'] = [
+                Permission(**perm) for perm in config['permissions']]
+    except Exception as e:
+        print(f'Invalid configuration file: {e}')
+        sys.exit(1)
+
     loop = asyncio.get_event_loop()
     try:
         loop.run_until_complete(start_server())
