@@ -9,7 +9,7 @@ import operator
 from functools import reduce
 from os.path import expanduser
 from collections import namedtuple
-__version__ = '0.1.1'
+__version__ = '0.1.2'
 config = {
     'passwords': {},
     'hosts': [],
@@ -152,22 +152,20 @@ async def start_server():
 
 def main():
     parser = argparse.ArgumentParser(description='SSH bastion server')
-    parser.add_argument('-c', '--config', default=None)
+    parser.add_argument('-c', '--config', default='~/.sshgateway/config.toml')
     parser.add_argument('--show-config', dest='show', action='store_true',
                         default=False)
     args = parser.parse_args()
-    if args.config is not None:
-        try:
-            with open(args.config) as configfile:
-                config.update(pytoml.loads(configfile.read()))
-        except FileNotFoundError:
-            print('Can not find configuration file.', file=sys.stderr)
-            sys.exit(1)
-        except PermissionError:
-            print('Can not read configuration file.', file=sys.stderr)
-            sys.exit(1)
-        except pytoml.TomlError as e:
-            print(f'Invalid configuration file: {e}', file=sys.stderr)
+    try:
+        with open(args.config) as configfile:
+            config.update(pytoml.loads(configfile.read()))
+    except FileNotFoundError:
+        print('Can not find configuration file. use default config')
+    except PermissionError:
+        print('Can not read configuration file.', file=sys.stderr)
+        sys.exit(1)
+    except pytoml.TomlError as e:
+        print(f'Invalid configuration file: {e}', file=sys.stderr)
 
     if args.show:
         print(pytoml.dumps(config))
