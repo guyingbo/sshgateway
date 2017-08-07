@@ -9,19 +9,21 @@ import operator
 from functools import reduce
 from os.path import expanduser
 from collections import namedtuple
-__version__ = '0.1.2'
+__version__ = '0.1.3'
 config = {
     'passwords': {},
     'hosts': [],
     'groups': [],
     'permissions': [],
+    'listen': '',
     'port': 8022,
     'authorized_client_keys': '~/.ssh/authorized_keys',
     'server_host_keys': ['/etc/ssh/ssh_host_rsa_key'],
     'client_key': '~/.ssh/{}.pem',
     'banner': 'SSH Gateway, welcome {username}!'
 }
-Host = namedtuple('Host', ['name', 'hostname', 'username', 'sshkey'])
+host_dict = {}
+Host = namedtuple('Host', ['name', 'hostname', 'username', 'sshkey', 'proxy'])
 Group = namedtuple('Group', ['name', 'users'])
 Permission = namedtuple('Permission', ['groups', 'hostnames'])
 
@@ -63,13 +65,13 @@ async def handle_client(process):
     process.stdout.write(config['banner'].format(username=username))
     process.stdout.write('\nYou are authorized to login into these servers:\n')
     my_hosts = get_user_hosts(username)
-    output = ''.join(
+    output = '\n' + ''.join(
         f'{i}) {host.name} {host.username}@{host.hostname}\n'
         for i, host in enumerate(my_hosts)
     )
     while True:
         process.stdout.write(output)
-        process.stdout.write('please enter a server number(q to quit): ')
+        process.stdout.write('Please enter a server number(q to quit): ')
         process.channel.set_echo(True)
         process.channel.set_line_mode(True)
         line = await process.stdin.readline()
@@ -86,14 +88,7 @@ async def handle_client(process):
         process.channel.set_echo(False)
         process.channel.set_line_mode(False)
         try:
-            async with asyncssh.connect(
-                    host.hostname,
-                    username=host.username,
-                    client_keys=[expanduser(
-                        config['client_key'].format(host.sshkey)
-                    )],
-                    known_hosts=None
-                    ) as conn:
+            async with connect(host) as conn:
                 term_type = process.get_terminal_type()
                 term_size = process.get_terminal_size()
                 chan, bash = await conn.create_session(
@@ -114,6 +109,25 @@ async def handle_client(process):
             print(e)
             process.stdout.write('can not open connection\n')
     process.exit(0)
+
+
+async def connect(host):
+    if host.proxy is None:
+        return await asyncssh.connect(
+                host.hostname,
+                username=host.username,
+                client_keys=[expanduser(
+                    config['client_key'].format(host.sshkey)
+                )],
+                known_hosts=None)
+    tunnel = await connect(host_dict[host.proxy])
+    return await tunnel.connect_ssh(
+            host.hostname,
+            username=host.username,
+            client_keys=[expanduser(
+                config['client_key'].format(host.sshkey)
+            )],
+            known_hosts=None)
 
 
 class MySSHServer(asyncssh.SSHServer):
@@ -141,8 +155,10 @@ class MySSHServer(asyncssh.SSHServer):
 
 
 async def start_server():
+    print(f"Starting ssh gateway server on "
+          f"{config['listen']}:{config['port']} ...")
     await asyncssh.create_server(
-            MySSHServer, '', config['port'],
+            MySSHServer, config['listen'], config['port'],
             server_host_keys=list(map(expanduser, config['server_host_keys'])),
             authorized_client_keys=expanduser(
                 config['authorized_client_keys']),
@@ -171,9 +187,15 @@ def main():
         print(pytoml.dumps(config))
         sys.exit(0)
 
+    for host in config['hosts']:
+        host.setdefault('proxy', None)
+
     try:
         config['hosts'] = [
                 Host(**host) for host in config['hosts']]
+        for host in config['hosts']:
+            host_dict[host.name] = host
+
         config['groups'] = [
                 Group(**group) for group in config['groups']]
         config['permissions'] = [
