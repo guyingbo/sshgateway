@@ -6,11 +6,13 @@ import asyncio
 import asyncssh
 import argparse
 import operator
+import traceback
 from functools import reduce
 from os.path import expanduser
 from collections import namedtuple
-__version__ = '0.1.3'
+__version__ = '0.1.4'
 config = {
+    'verbose': 0,
     'passwords': {},
     'hosts': [],
     'groups': [],
@@ -88,7 +90,8 @@ async def handle_client(process):
         process.channel.set_echo(False)
         process.channel.set_line_mode(False)
         try:
-            async with connect(host) as conn:
+            context = await connect(host)
+            async with context as conn:
                 term_type = process.get_terminal_type()
                 term_size = process.get_terminal_size()
                 chan, bash = await conn.create_session(
@@ -106,8 +109,10 @@ async def handle_client(process):
                 )
                 await process.stdout.drain()
         except Exception as e:
-            print(e)
-            process.stdout.write('can not open connection\n')
+            if config['verbose'] > 0:
+                process.stdout.write(f'can not open connection: {host}\n')
+            if config['verbose'] > 1:
+                traceback.print_exc()
     process.exit(0)
 
 
@@ -133,14 +138,16 @@ async def connect(host):
 class MySSHServer(asyncssh.SSHServer):
     def connection_made(self, conn):
         self.peername = conn.get_extra_info('peername')[0]
-        print(f'SSH connection received from {self.peername}.')
+        if config['verbose'] > 0:
+            print(f'SSH connection received from {self.peername}.')
 
     def connection_lost(self, exc):
-        if exc:
-            print(f'SSH connection error from {self.peername}: {exc}',
-                  file=sys.stderr)
-        else:
-            print(f'SSH connection closed by {self.peername}.')
+        if config['verbose'] > 0:
+            if exc:
+                print(f'SSH connection error from {self.peername}: {exc}',
+                      file=sys.stderr)
+            else:
+                print(f'SSH connection closed by {self.peername}.')
 
     def begin_auth(self, username):
         # If the user's password is the empty string, no auth is required
@@ -167,11 +174,14 @@ async def start_server():
 
 
 def main():
-    parser = argparse.ArgumentParser(description='SSH bastion server')
+    parser = argparse.ArgumentParser(
+            description=f'SSH bastion server {__version__}')
     parser.add_argument('-c', '--config', default='~/.sshgateway/config.toml')
     parser.add_argument('--show-config', dest='show', action='store_true',
                         default=False)
+    parser.add_argument('-v', dest='verbose', action='count', default=1)
     args = parser.parse_args()
+    config['verbose'] = args.verbose
     try:
         with open(expanduser(args.config)) as configfile:
             config.update(pytoml.loads(configfile.read()))
@@ -201,7 +211,7 @@ def main():
         config['permissions'] = [
                 Permission(**perm) for perm in config['permissions']]
     except Exception as e:
-        print(f'Invalid configuration file: {e}')
+        print(f'Invalid configuration file: {e}', file=sys.stderr)
         sys.exit(1)
 
     loop = asyncio.get_event_loop()
